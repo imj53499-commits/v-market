@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>V-MARKET | VALORANT 계정 마켓</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen flex flex-col items-center">
+  <div id="toast-box" class="fixed top-20 z-50 px-5 py-3 rounded-2xl bg-[#1e1b4b] border border-[#6366f1]/40 text-white shadow-2xl hidden flex items-center gap-2.5 text-sm">
+    <span id="toast-message">알림</span>
+  </div>
+
+  <header class="w-full bg-white text-[#111] sticky top-0 z-40 border-b border-black/5 shadow-sm">
+    <div class="store-header-inner py-3.5 flex items-center justify-between gap-4">
+      <a href="index.html" class="flex items-center gap-2 min-w-0 no-underline">
+        <span class="text-xl">🎨</span>
+        <span class="font-black tracking-tight text-lg whitespace-nowrap">V-MARKET</span>
+      </a>
+      <div id="header-auth-area" class="shrink-0">
+        <button id="discord-login-btn" onclick="handleDiscordLogin()" class="discord-btn text-xs sm:text-sm px-4 py-2 flex items-center gap-1.5 cursor-pointer">
+          <span aria-hidden="true">💬</span><span>Discord로 시작하기</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="store-main flex flex-col gap-6">
+    <div class="flex items-center justify-between gap-3 text-xs text-neutral-400">
+      <span class="flex items-center gap-1.5 min-w-0"><span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse shrink-0"></span><span class="truncate">24시간 자동 계정 출고</span></span>
+      <span class="text-neutral-500 whitespace-nowrap">실시간 D1 재고 연동</span>
+    </div>
+
+    <div id="product-list" class="product-grid">
+      <!-- Injected by script.js -->
+    </div>
+
+    <div class="pt-8 pb-8 text-center text-xs text-neutral-500 flex flex-col gap-2">
+      <div class="flex flex-wrap justify-center items-center gap-4">
+        <a href="admin.html" class="text-neutral-400 hover:text-purple-400 transition-colors underline underline-offset-4">관리자 페이지로 이동</a>
+        <span>•</span>
+        <button onclick="openDepositModal()" class="text-neutral-400 hover:text-purple-400 transition-colors">포인트 충전 신청</button>
+      </div>
+      <p class="text-neutral-600 mt-2">V-MARKET © 2026. Cloudflare D1 & Workers Architecture</p>
+    </div>
+  </main>
+
+  <div id="product-detail-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white text-[#111] w-full max-w-[500px] rounded-t-[32px] sm:rounded-[28px] p-7 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      <button onclick="closeProductModal()" class="absolute top-6 right-6 w-10 h-10 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-neutral-600" aria-label="닫기">✕</button>
+      <div class="pr-10"><span id="modal-server" class="text-xs font-bold text-[#6d28d9] bg-purple-50 px-2.5 py-1 rounded-md">한국 (KR)</span><h2 id="modal-title" class="text-2xl font-black mt-2">스킨 0~10</h2><p id="modal-desc" class="text-sm font-medium text-[#4a4a4a] mt-1">스킨 0~10개짜리 계정</p></div>
+      <div class="my-6 bg-neutral-50 rounded-2xl p-5 flex flex-col gap-3 border border-neutral-100 text-sm">
+        <div class="flex justify-between items-center"><span class="text-neutral-500">스킨 개수</span><span id="modal-skins" class="font-bold">0~10개 무작위</span></div>
+        <div class="flex justify-between items-center"><span class="text-neutral-500">재고</span><span id="modal-stock" class="font-bold">62개 보유</span></div>
+        <div class="flex justify-between items-center"><span class="text-neutral-500">서버</span><span id="modal-server-detail" class="font-bold">한국 (KR)</span></div>
+        <div class="flex justify-between items-center pt-2 border-t border-neutral-200/60"><span class="text-neutral-500">가격</span><span id="modal-price" class="text-2xl font-black text-[#6d28d9]">10원</span></div>
+      </div>
+      <div id="modal-details-box" class="mb-6 text-xs text-neutral-600 leading-relaxed bg-purple-50/50 p-3.5 rounded-xl border border-purple-100"><p class="font-bold text-purple-900 mb-1">상세 안내</p><span id="modal-details">안전 보증 계정입니다.</span></div>
+      <div id="purchase-status-box" class="mb-4 hidden p-3.5 rounded-xl text-xs font-semibold"></div>
+      <button id="modal-purchase-btn" onclick="executePurchase()" class="w-full purchase-btn py-3.5 text-base flex items-center justify-center gap-2 cursor-pointer"><span id="modal-purchase-text">구매하기</span></button>
+    </div>
+  </div>
+
+  <div id="deposit-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white text-[#111] w-full max-w-[480px] rounded-t-[32px] sm:rounded-[28px] p-7 shadow-2xl relative">
+      <button onclick="closeDepositModal()" class="absolute top-6 right-6 w-10 h-10 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-neutral-600" aria-label="닫기">✕</button>
+      <h3 class="text-xl font-bold">포인트 충전 신청</h3><p class="text-xs text-neutral-500 mt-1 mb-5">입금 후 신청서를 제출하시면 관리자 승인 후 즉시 지급됩니다.</p>
+      <form onsubmit="handleDepositSubmit(event)" class="space-y-4">
+        <div><label class="text-xs font-bold text-neutral-700 block mb-1">입금 계좌</label><select id="deposit-bank" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2.5 text-sm font-medium"><option value="토스뱅크">토스뱅크 1000-2026-9901 (예금주: V-MARKET)</option><option value="카카오뱅크">카카오뱅크 3333-01-99283 (예금주: V-MARKET)</option></select></div>
+        <div><label class="text-xs font-bold text-neutral-700 block mb-1">충전 금액 (원)</label><input type="number" id="deposit-amount" value="1000" min="10" required class="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2.5 text-sm font-semibold" /></div>
+        <div><label class="text-xs font-bold text-neutral-700 block mb-1">입금자명</label><input type="text" id="deposit-name" placeholder="홍길동" required class="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2.5 text-sm font-semibold" /></div>
+        <button type="submit" class="w-full purchase-btn py-3 text-sm font-bold mt-2">신청 완료하기</button>
+      </form>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
