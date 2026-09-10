@@ -36,6 +36,15 @@
       <!-- Injected by script.js -->
     </div>
 
+    <section id="user-activity" class="user-activity hidden">
+      <div class="activity-head"><div><p class="eyebrow">MY V-MARKET</p><h2>내 활동</h2></div><span class="activity-note">로그인한 계정에만 표시됩니다</span></div>
+      <div class="activity-grid">
+        <article class="activity-card"><h3>구매내역</h3><div id="order-history" class="activity-list"><p class="empty-state">아직 구매내역이 없습니다.</p></div></article>
+        <article class="activity-card"><h3>입금 신청내역</h3><div id="deposit-history" class="activity-list"><p class="empty-state">입금 신청내역이 없습니다.</p></div></article>
+        <article class="activity-card inquiry-card"><h3>문의하기</h3><form onsubmit="submitInquiry(event)" class="inquiry-form"><input id="inquiry-title" required placeholder="문의 제목" /><textarea id="inquiry-message" required placeholder="문의 내용을 입력해주세요."></textarea><button class="purchase-btn" type="submit">문의 등록</button></form><div id="inquiry-history" class="activity-list"><p class="empty-state">문의내역이 없습니다.</p></div></article>
+      </div>
+    </section>
+
     <div class="pt-8 pb-8 text-center text-xs text-neutral-500 flex flex-col gap-2">
       <div class="flex flex-wrap justify-center items-center gap-4">
         <a href="admin.html" class="text-neutral-400 hover:text-purple-400 transition-colors underline underline-offset-4">관리자 페이지로 이동</a>

@@ -4,6 +4,7 @@ const STORAGE_KEY_PRODUCTS = "vm_products_db";
 const STORAGE_KEY_USER = "vm_user_session";
 const STORAGE_KEY_ORDERS = "vm_orders_db";
 const STORAGE_KEY_DEPOSITS = "vm_deposits_db";
+const WORKER_URL = "https://v-market.imj53499.workers.dev";
 
 const DEFAULT_PRODUCTS = [
   {
@@ -117,18 +118,7 @@ function updateAuthHeader() {
 }
 
 function handleDiscordLogin() {
-  // If backend Worker is online, redirect to /api/auth/discord/login
-  // For sandbox preview, instantiate session
-  const mockUser = {
-    // Preview-only session. Production uses the Discord Worker OAuth session.
-    id: "1547549857231675411",
-    username: "RadiantPlayer",
-    discriminator: "9999",
-    points: 1000,
-    role: "admin"
-  };
-  setCurrentUser(mockUser);
-  showToast("Discord 계정으로 로그인되었습니다! (보유: 1,000원)");
+  window.location.href = `${WORKER_URL}/api/auth/discord/login`;
 }
 
 function handleLogout() {
@@ -214,25 +204,16 @@ function handleDepositSubmit(e) {
   const amount = parseInt(document.getElementById("deposit-amount").value, 10);
   const name = document.getElementById("deposit-name").value.trim();
 
-  const raw = localStorage.getItem(STORAGE_KEY_DEPOSITS);
-  const deposits = raw ? JSON.parse(raw) : [];
-  deposits.unshift({
-    id: Date.now(),
-    userId: user.id,
-    userName: user.username,
-    amount,
-    depositorName: name,
-    bankName: bank,
-    status: "pending",
-    createdAt: new Date().toISOString().replace("T", " ").substring(0, 16)
-  });
-  localStorage.setItem(STORAGE_KEY_DEPOSITS, JSON.stringify(deposits));
-
-  closeDepositModal();
-  showToast("입금 신청 완료! 관리자 승인 후 포인트가 지급됩니다.");
+  fetch(`${WORKER_URL}/api/deposits`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amount, depositor_name: name, bank_name: bank }) })
+    .then(r => r.json()).then(data => {
+      if (!data.success) throw new Error(data.error || "입금 신청에 실패했습니다.");
+      closeDepositModal();
+      showToast("입금 신청 완료! 관리자 승인 후 포인트가 지급됩니다.");
+      loadUserActivity();
+    }).catch(err => showToast(err.message));
 }
 
-function executePurchase() {
+async function executePurchase() {
   if (!activeSelectedProduct) return;
   const user = getCurrentUser();
   if (!user) {
@@ -250,37 +231,14 @@ function executePurchase() {
     return;
   }
 
-  // Deduct
-  p.stock -= 1;
-  const products = getStoredProducts();
-  const idx = products.findIndex(item => item.id === p.id);
-  if (idx !== -1) {
-    products[idx].stock = p.stock;
-    localStorage.setItem(STORAGE_KEY_PRODUCTS, JSON.stringify(products));
-  }
-
-  user.points -= p.price;
-  setCurrentUser(user);
-
-  // Generate credential
-  const cred = `val_kr_${p.id}_${Math.random().toString(36).substring(2, 6)}:pass${Math.floor(100 + Math.random() * 900)}#safe`;
-  const rawOrders = localStorage.getItem(STORAGE_KEY_ORDERS);
-  const orders = rawOrders ? JSON.parse(rawOrders) : [];
-  orders.unshift({
-    id: Date.now(),
-    orderNumber: `ORD-${Date.now().toString().slice(-8)}`,
-    userId: user.id,
-    userName: user.username,
-    productId: p.id,
-    productTitle: p.title,
-    price: p.price,
-    accountData: cred,
-    createdAt: new Date().toISOString().replace("T", " ").substring(0, 16),
-    status: "completed"
-  });
-  localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(orders));
-
-  renderProductList();
+  try {
+    const response = await fetch(`${WORKER_URL}/api/orders`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ product_id: p.id }) });
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.error || "구매에 실패했습니다.");
+    const cred = result.account_data;
+    const fresh = await fetch(`${WORKER_URL}/api/auth/me`, { credentials: "include" }).then(r => r.json());
+    setCurrentUser(fresh);
+    renderProductList();
 
   const statusBox = document.getElementById("purchase-status-box");
   statusBox.className = "mb-4 p-3.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-900 border border-emerald-300";
@@ -289,7 +247,41 @@ function executePurchase() {
     <div class="mt-1 font-mono text-xs select-all bg-white p-2 rounded border border-emerald-200">${cred}</div>
   `;
   statusBox.classList.remove("hidden");
-  showToast("구매가 완료되었습니다!");
+    loadUserActivity();
+    showToast("구매가 완료되었습니다!");
+  } catch (err) {
+    showToast(err.message);
+  }
+}
+
+async function loadUserActivity() {
+  const user = getCurrentUser();
+  const panel = document.getElementById("user-activity");
+  if (!user || !panel) return;
+  panel.classList.remove("hidden");
+  try {
+    const [orders, inquiries, deposits] = await Promise.all([
+      fetch(`${WORKER_URL}/api/orders`, { credentials: "include" }).then(r => r.json()),
+      fetch(`${WORKER_URL}/api/inquiries`, { credentials: "include" }).then(r => r.json()),
+      fetch(`${WORKER_URL}/api/deposits`, { credentials: "include" }).then(r => r.json())
+    ]);
+    document.getElementById("order-history").innerHTML = orders.length ? orders.map(o => `<div class="activity-row"><b>${escapeHtml(o.product_title)}</b><span>${escapeHtml(o.account_data || "출고 준비")}</span><small>${escapeHtml(o.created_at || "")}</small></div>`).join("") : `<p class="empty-state">아직 구매내역이 없습니다.</p>`;
+    document.getElementById("inquiry-history").innerHTML = inquiries.length ? inquiries.map(i => `<div class="activity-row"><b>${escapeHtml(i.title)}</b><span>${escapeHtml(i.reply || "답변 대기 중")}</span><small>${escapeHtml(i.status || "pending")}</small></div>`).join("") : `<p class="empty-state">문의내역이 없습니다.</p>`;
+    document.getElementById("deposit-history").innerHTML = deposits.length ? deposits.map(d => `<div class="activity-row"><b>${Number(d.amount).toLocaleString()}원</b><span>${escapeHtml(d.status)}</span><small>${escapeHtml(d.created_at || "")}</small></div>`).join("") : `<p class="empty-state">입금 신청내역이 없습니다.</p>`;
+  } catch { showToast("내역을 불러오지 못했습니다."); }
+}
+
+async function submitInquiry(e) {
+  e.preventDefault();
+  const user = getCurrentUser();
+  if (!user) return showToast("먼저 Discord 로그인을 해주세요.");
+  const title = document.getElementById("inquiry-title").value.trim();
+  const message = document.getElementById("inquiry-message").value.trim();
+  const res = await fetch(`${WORKER_URL}/api/inquiries`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, message }) });
+  if (!res.ok) return showToast("문의 등록에 실패했습니다.");
+  e.target.reset();
+  showToast("문의가 등록되었습니다.");
+  loadUserActivity();
 }
 
 function escapeHtml(str) {
@@ -305,6 +297,9 @@ function escapeHtml(str) {
 window.addEventListener("DOMContentLoaded", () => {
   updateAuthHeader();
   renderProductList();
+  fetch(`${WORKER_URL}/api/auth/me`, { credentials: "include" }).then(r => r.ok ? r.json() : null).then(user => {
+    if (user) { setCurrentUser(user); loadUserActivity(); }
+  }).catch(() => {});
 
   window.addEventListener("vm_data_updated", () => {
     renderProductList();

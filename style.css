@@ -106,3 +106,22 @@ body {
 }
 .admin-number-control:focus { border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(139,92,246,.15); }
 .admin-save-hint { color: #a78bfa; font-size: 11px; min-height: 16px; }
+
+/* Customer activity area */
+.user-activity{width:100%;margin-top:1rem;background:#111;border:1px solid rgba(255,255,255,.08);border-radius:28px;padding:1.25rem;color:#fff}
+.user-activity.hidden{display:none}
+.activity-head{display:flex;align-items:end;justify-content:space-between;gap:1rem;margin-bottom:1rem}
+.activity-head h2{margin:.25rem 0 0;font-size:1.35rem;font-weight:900}
+.eyebrow{margin:0;color:#a78bfa;font-size:.68rem;font-weight:900;letter-spacing:.14em}
+.activity-note{font-size:.7rem;color:#777}
+.activity-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.85rem}
+.activity-card{background:#fff;color:#161616;border-radius:20px;padding:1rem;min-width:0}
+.activity-card h3{margin:0 0 .75rem;font-size:.95rem;font-weight:900}
+.activity-list{display:flex;flex-direction:column;gap:.55rem;max-height:210px;overflow:auto}
+.activity-row{display:grid;gap:.2rem;border-top:1px solid #eee;padding-top:.6rem;font-size:.75rem}
+.activity-row:first-child{border-top:0;padding-top:0}
+.activity-row b{font-size:.78rem}.activity-row span{color:#555;overflow-wrap:anywhere}.activity-row small{color:#999}.empty-state{color:#999;font-size:.78rem;margin:.25rem 0}
+.inquiry-form{display:grid;gap:.55rem;margin-bottom:1rem}.inquiry-form input,.inquiry-form textarea{width:100%;border:1px solid #e5e5e5;border-radius:12px;padding:.65rem .75rem;font-size:.78rem;outline:none}.inquiry-form textarea{min-height:70px;resize:vertical}.inquiry-form input:focus,.inquiry-form textarea:focus{border-color:#8b5cf6}
+@media(max-width:767px){.user-activity{border-radius:24px;padding:1rem}.activity-head{align-items:start;flex-direction:column}.activity-grid{grid-template-columns:1fr}.activity-card{padding:.9rem}.activity-list{max-height:160px}}
+@media(min-width:768px) and (max-width:1199px){.activity-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.inquiry-card{grid-column:1/-1}}
+@media(min-width:1200px){.user-activity{padding:1.5rem}.activity-card{padding:1.2rem}}

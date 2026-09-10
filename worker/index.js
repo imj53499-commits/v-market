@@ -9,9 +9,10 @@
  */
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://v-market.pages.dev",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Credentials": "true",
 };
 const ADMIN_DISCORD_ID = "1547549857231675411";
 
@@ -99,25 +100,23 @@ export default {
 
         const role = userData.id === ADMIN_DISCORD_ID ? "admin" : "user";
         const session = await createSession({ id: userData.id, username: userData.username, role }, env);
-        const clientReturnUrl = env.FRONTEND_URL || "/";
+        const clientReturnUrl = env.FRONTEND_URL || "https://v-market.pages.dev";
         return new Response(null, { status: 302, headers: {
           Location: `${clientReturnUrl}?login_success=1`,
-          "Set-Cookie": `vm_session=${session}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800`
+          "Set-Cookie": `vm_session=${session}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=604800`
         }});
       }
 
       if (pathname === "/api/auth/me") {
         if (!sessionUser) return errorResponse("Not authenticated", 401);
-        return jsonResponse(sessionUser);
+        const dbUser = env.DB ? await env.DB.prepare("SELECT id, username, points, role FROM users WHERE id = ?").bind(sessionUser.id).first() : null;
+        return jsonResponse({ ...sessionUser, points: dbUser?.points ?? 0, role: dbUser?.role || sessionUser.role });
       }
 
       const adminOnlyRequest =
         (pathname === "/api/products" && request.method === "POST") ||
         (pathname.startsWith("/api/products/") && request.method !== "GET") ||
-        (pathname === "/api/deposits" && request.method === "GET") ||
         (pathname.startsWith("/api/deposits/") && pathname.endsWith("/approve")) ||
-        (pathname === "/api/orders" && request.method === "GET") ||
-        (pathname === "/api/inquiries" && request.method === "GET") ||
         (pathname.startsWith("/api/inquiries/") && pathname.endsWith("/reply"));
 
       if ((pathname.startsWith("/api/admin/") || adminOnlyRequest) && sessionUser?.id !== ADMIN_DISCORD_ID) {
@@ -169,7 +168,9 @@ export default {
       // 4. Deposits API (D1)
       if (pathname === "/api/deposits") {
         if (request.method === "GET") {
-          const { results } = await env.DB.prepare("SELECT * FROM deposits ORDER BY created_at DESC").all();
+          const { results } = sessionUser.role === "admin"
+            ? await env.DB.prepare("SELECT * FROM deposits ORDER BY created_at DESC").all()
+            : await env.DB.prepare("SELECT * FROM deposits WHERE user_id = ? ORDER BY created_at DESC").bind(sessionUser.id).all();
           return jsonResponse(results);
         }
 
@@ -204,12 +205,15 @@ export default {
       // 6. Orders API (Purchase execution)
       if (pathname === "/api/orders") {
         if (request.method === "GET") {
-          const { results } = await env.DB.prepare("SELECT * FROM orders ORDER BY created_at DESC").all();
+          const { results } = sessionUser.role === "admin"
+            ? await env.DB.prepare("SELECT * FROM orders ORDER BY created_at DESC").all()
+            : await env.DB.prepare("SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC").bind(sessionUser.id).all();
           return jsonResponse(results);
         }
 
         if (request.method === "POST") {
-          const { user_id, product_id } = await request.json();
+          const { product_id } = await request.json();
+          const user_id = sessionUser.id;
 
           // Check balance & product
           const user = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(user_id).first();
@@ -252,16 +256,18 @@ export default {
       // 7. Support Inquiries API
       if (pathname === "/api/inquiries") {
         if (request.method === "GET") {
-          const { results } = await env.DB.prepare("SELECT * FROM inquiries ORDER BY created_at DESC").all();
+          const { results } = sessionUser.role === "admin"
+            ? await env.DB.prepare("SELECT * FROM inquiries ORDER BY created_at DESC").all()
+            : await env.DB.prepare("SELECT * FROM inquiries WHERE user_id = ? ORDER BY created_at DESC").bind(sessionUser.id).all();
           return jsonResponse(results);
         }
 
         if (request.method === "POST") {
-          const { user_id, user_name, title, message } = await request.json();
+          const { title, message } = await request.json();
           const res = await env.DB.prepare(`
             INSERT INTO inquiries (user_id, user_name, title, message)
             VALUES (?, ?, ?, ?)
-          `).bind(user_id, user_name, title, message).run();
+          `).bind(sessionUser.id, sessionUser.username, title, message).run();
           return jsonResponse({ success: true, id: res.meta.last_row_id });
         }
       }
