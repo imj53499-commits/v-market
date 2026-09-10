@@ -7,6 +7,7 @@ const STORAGE_KEY_ORDERS = "vm_orders_db";
 const STORAGE_KEY_INQUIRIES = "vm_inquiries_db";
 const STORAGE_KEY_USER = "vm_user_session";
 const ADMIN_DISCORD_ID = "1547549857231675411";
+const WORKER_URL = "https://v-market.imj53499.workers.dev";
 const INITIAL_PRODUCTS = [
   { id: 1, title: "스킨 0~10", description: "스킨 0~10개짜리 계정", skins: "0~10개 무작위", stock: 62, price: 10, server: "한국 (KR)", details: "안전 계정 보증", status: "active" },
   { id: 2, title: "스킨 11~20", description: "스킨 11~20개짜리 계정", skins: "11~20개 무작위", stock: 45, price: 50, server: "한국 (KR)", details: "안전 계정 보증", status: "active" },
@@ -92,7 +93,7 @@ async function guardAdminAccess() {
 
   // Production path: Worker validates the HttpOnly Discord session cookie.
   try {
-    const response = await fetch('/api/auth/me', { credentials: 'include' });
+    const response = await fetch(`${WORKER_URL}/api/auth/me`, { credentials: 'include' });
     if (response.ok) {
       const user = await response.json();
       if (user?.id === ADMIN_DISCORD_ID && user?.role === 'admin') return true;
